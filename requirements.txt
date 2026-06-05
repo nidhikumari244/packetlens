@@ -1,0 +1,5 @@
+streamlit==1.45.1
+groq==0.28.0
+python-dotenv==1.1.0
+pandas==2.2.3
+pytest==8.4.1
