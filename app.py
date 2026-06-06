@@ -135,18 +135,47 @@ st.markdown(
 
 def main() -> None:
     with st.sidebar:
-        st.title("NetOps AI")
-        st.caption("Incident triage workspace")
+        st.title("PacketLens")
+        st.caption("Network Incident Analyzer")
+
         page = st.radio(
             "Navigation",
             ["Dashboard", "Diagnose Issue", "History", "About Project"],
             label_visibility="collapsed",
         )
+
         st.divider()
-        st.caption("Runtime")
-        st.write(f"Groq API: **{'Configured' if os.getenv('GROQ_API_KEY') else 'Missing'}**")
-        st.write("Database: **SQLite**")
-        st.write("Mode: **AI + Rules**")
+
+        # NEW CONTROL CENTER
+        st.markdown("## Incident Filters")
+
+        protocol_filter = st.selectbox(
+            "Protocol Scope",
+            ["All", "DNS", "TCP/IP", "HTTP/HTTPS", "DHCP", "Routing", "Firewall", "Wi-Fi"]
+        )
+
+        severity_threshold = st.slider(
+            "Severity Threshold",
+            0,
+            100,
+            50
+        )
+
+        st.divider()
+
+        # SYSTEM HEALTH PANEL
+        st.markdown("## System Status")
+
+        st.success("Rule Engine: Active")
+
+        if os.getenv("GROQ_API_KEY"):
+            st.success("AI Service: Available")
+        else:
+            st.error("AI Engine: OFFLINE")
+
+        st.info("Database: Connected")
+
+        st.info("Processing Mode: Hybrid")
 
     if page == "Dashboard":
         dashboard_page()
@@ -172,21 +201,56 @@ def hero(title: str, subtitle: str) -> None:
 
 def dashboard_page() -> None:
     hero(
-        "AI Network Troubleshooting Assistant",
-        "A portfolio-grade incident triage tool for DNS, DHCP, TCP/IP, routing, firewall, Wi-Fi, and HTTP/HTTPS issues.",
+    "PacketLens Network Operations Dashboard",
+    "Analyze network incidents, identify likely root causes, and track troubleshooting history across DNS, DHCP, Routing, Firewall, and TCP/IP issues."
     )
-
     stats = get_dashboard_stats()
+    high_rate = round(
+    (stats["high"] / stats["total"]) * 100,
+    1
+) if stats["total"] else 0
+
+    if stats["high"] >= 5:
+        st.error(" Critical Network Risk Detected")
+    elif stats["high"] >= 2:
+        st.warning("⚠ Elevated Operational Risk")
+    else:
+        st.success("Current Incident Status: Normal")
     col1, col2, col3, col4 = st.columns(4)
-    render_kpi(col1, "Total Incidents", stats["total"], "All diagnoses stored")
-    render_kpi(col2, "High Severity", stats["high"], "Requires faster triage")
-    render_kpi(col3, "Categories Seen", len(stats["by_category"]), "Protocol coverage")
+    render_kpi(col1, "Active Incidents", stats["total"], "Tracked incidents")
+    render_kpi(col2, "Critical Alerts", stats["high"], "Immediate attention required")
+    render_kpi(col3, "Protocol Coverage", len(stats["by_category"]), "Network domains monitored")
+    render_kpi(
+    col4,
+    "High Severity Rate",
+    f"{high_rate}%",
+    "Percentage of incidents marked high severity"
+)
     high_rate = round((stats["high"] / stats["total"]) * 100, 1) if stats["total"] else 0
-    render_kpi(col4, "High Severity Rate", f"{high_rate}%", "Operational risk")
+    st.markdown("## Incident Processing Pipeline")
+    st.code("""
+            User Input
+                │
+                ▼
+            Rule-Based Classification
+                │
+                ▼
+            AI Diagnosis Engine
+                │
+                ▼
+            Severity Assessment
+                │
+                ▼
+            Incident Storage
+                │
+                ▼
+            Dashboard Analytics
+            """)
+    
 
     left, right = st.columns([1.25, 1])
     with left:
-        st.subheader("Incident Category Analytics")
+        st.subheader("Incidents by Category")
         if stats["by_category"]:
             chart_data = pd.DataFrame(stats["by_category"], columns=["Category", "Count"])
             st.bar_chart(chart_data.set_index("Category"), height=260)
@@ -194,14 +258,14 @@ def dashboard_page() -> None:
             st.info("No incidents yet. Run a diagnosis to populate the dashboard.")
 
     with right:
-        st.subheader("Severity Mix")
+        st.subheader("Incident Severity Breakdown")
         if stats["by_severity"]:
             severity_data = pd.DataFrame(stats["by_severity"], columns=["Severity", "Count"])
             st.bar_chart(severity_data.set_index("Severity"), height=260)
         else:
             st.info("Severity analytics will appear after the first diagnosis.")
 
-    st.subheader("Recent Incident Feed")
+    st.subheader("Recent Incident Stream")
     recent_rows = stats.get("recent_rows", [])
     if recent_rows:
         for row in recent_rows:
