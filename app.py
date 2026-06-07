@@ -140,7 +140,7 @@ def main() -> None:
 
         page = st.radio(
             "Navigation",
-            ["Dashboard", "Diagnose Issue", "History", "About Project"],
+            ["Dashboard", "Diagnose Issue", "History", "About PacketLens"],
             label_visibility="collapsed",
         )
 
@@ -171,7 +171,7 @@ def main() -> None:
         if os.getenv("GROQ_API_KEY"):
             st.success("AI Service: Available")
         else:
-            st.error("AI Engine: OFFLINE")
+            st.error("AI Service: Unavailable")
 
         st.info("Database: Connected")
 
@@ -211,11 +211,11 @@ def dashboard_page() -> None:
 ) if stats["total"] else 0
 
     if stats["high"] >= 5:
-        st.error(" Critical Network Risk Detected")
+        st.error("Critical Network Risk Detected")
     elif stats["high"] >= 2:
         st.warning("⚠ Elevated Operational Risk")
     else:
-        st.success("Current Incident Status: Normal")
+        st.success("System Status: Healthy")
     col1, col2, col3, col4 = st.columns(4)
     render_kpi(col1, "Active Incidents", stats["total"], "Tracked incidents")
     render_kpi(col2, "Critical Alerts", stats["high"], "Immediate attention required")
@@ -226,16 +226,16 @@ def dashboard_page() -> None:
     f"{high_rate}%",
     "Percentage of incidents marked high severity"
 )
-    high_rate = round((stats["high"] / stats["total"]) * 100, 1) if stats["total"] else 0
+
     st.markdown("## Incident Processing Pipeline")
     st.code("""
             User Input
                 │
                 ▼
-            Rule-Based Classification
+            Issue Classification
                 │
                 ▼
-            AI Diagnosis Engine
+            Root Cause Analysis
                 │
                 ▼
             Severity Assessment
@@ -264,6 +264,8 @@ def dashboard_page() -> None:
             st.bar_chart(severity_data.set_index("Severity"), height=260)
         else:
             st.info("Severity analytics will appear after the first diagnosis.")
+
+    
 
     st.subheader("Recent Incident Stream")
     recent_rows = stats.get("recent_rows", [])
@@ -300,6 +302,11 @@ def diagnose_page() -> None:
         "Routing break": "traceroute stops after gateway while accessing 10.20.30.40. Other local network devices are reachable.",
         "DHCP lease failure": "DHCP not assigning IP. Client has 169.254.10.22 address and cannot access internal resources.",
         "Firewall block": "Application traffic is blocked on port 443 after a firewall policy update. Ping works but HTTPS fails.",
+        "Wi-Fi Authentication Failure": "Users disconnect from the corporate Wi-Fi every 10 minutes. Signal strength is strong but authentication repeatedly fails.",
+        "VPN Connection Failure": "Remote users can authenticate to the VPN but cannot access internal applications after connection.",
+        "SSL Certificate Error": "Users receive SSL certificate warnings when accessing the company portal after a server migration.",
+        "HTTP Timeout": "The company website frequently returns HTTP 504 Gateway Timeout errors during peak hours.",
+        
     }
 
     col_left, col_right = st.columns([1.15, 0.85])
@@ -352,12 +359,29 @@ def history_page() -> None:
         "Incident History",
         "Search previous diagnoses, filter by protocol category, delete stale entries, and export incident-ready reports.",
     )
+    col1, col2, col3 = st.columns([1, 1, 2])
+    category = col1.selectbox(
+        "Incident Category",
+        CATEGORIES
+        )
+    severity = col2.selectbox(
+        "Severity",
+        ["All", "High", "Medium", "Low"]
+        )
+    search_text = col3.text_input(
+        "Search issue text or diagnosis"
+        
+        )
+    rows = get_diagnoses(
+        category=category,
+        search_text=search_text.strip()
+        )
+    if severity != "All":
+        rows = [
+            row for row in rows
+            if row["severity"] == severity
+            ]
 
-    col1, col2 = st.columns([1, 2])
-    category = col1.selectbox("Filter by category", CATEGORIES)
-    search_text = col2.text_input("Search issue text or diagnosis")
-
-    rows = get_diagnoses(category=category, search_text=search_text.strip())
     st.caption(f"{len(rows)} record(s) found")
     if not rows:
         st.info("No matching incident records found.")
@@ -385,28 +409,38 @@ def history_page() -> None:
 
 def about_page() -> None:
     hero(
-        "About The Project",
-        "A resume-ready AI + networking project built to demonstrate protocol knowledge, software architecture, data persistence, and production-minded error handling.",
-    )
+    "About PacketLens",
+    "PacketLens is a network incident analysis tool that helps identify and troubleshoot common DNS, DHCP, Routing, Firewall, TCP/IP, and HTTP/HTTPS issues.",
+)
 
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("What It Does")
         st.write(
-            "The assistant converts raw network symptoms into a structured incident report containing probable root cause, impact, severity, confidence, troubleshooting steps, commands, prevention tips, and escalation guidance."
-        )
+    "The application analyzes network symptoms, classifies the issue category, estimates severity, and generates troubleshooting recommendations. Diagnoses are stored for future analysis and reporting."
+)
         st.subheader("Tech Stack")
         st.write("Python, Streamlit, Groq API, SQLite, Pandas, python-dotenv")
 
     with col2:
         st.subheader("Industry Use Case")
         st.write(
-            "A helpdesk analyst, NOC intern, or network engineer can use it to triage common incidents before escalation to senior engineers."
-        )
-        st.subheader("Why It Is Resume-Worthy")
-        st.write(
-            "It combines explainable rules with LLM output, stores incident history, supports report export, and presents operational analytics in a clean dashboard."
-        )
+    "The system can assist helpdesk teams, NOC analysts, and network administrators in identifying common network issues and reviewing recommended troubleshooting steps."
+)
+        st.subheader("Key Features")
+        st.write("""
+• Network issue classification
+
+• Root cause analysis
+
+• Severity assessment
+
+• Incident history tracking
+
+• Report generation
+
+• Dashboard analytics
+""")
 
     st.subheader("Architecture")
     st.code(
@@ -418,9 +452,20 @@ report_generator.py -> downloadable incident reports""",
         language="text",
     )
 
-    st.subheader("Next Enhancements")
-    st.write("FastAPI backend, Docker image, pytest coverage, authentication, PDF reports, and Cisco IOS command templates.")
+    st.subheader("Future Enhancements")
+    st.write("""
+• FastAPI backend
 
+• Docker deployment
+
+• User authentication
+
+• PDF report generation
+
+• Automated testing with pytest
+
+• Cisco IOS troubleshooting templates
+""")
 
 def render_diagnosis(
     issue_description: str,
